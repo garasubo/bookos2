@@ -1,11 +1,17 @@
 #![no_main]
 #![no_std]
+#![feature(asm)]
+#![feature(naked_functions)]
 
 use core::panic::PanicInfo;
 use core::ptr;
 use cortex_m_semihosting::hprintln;
+use core::mem::MaybeUninit;
 
 mod systick;
+
+#[repr(align(8))]
+struct AlignedStack(MaybeUninit<[u8; 1024]>);
 
 #[no_mangle]
 pub unsafe extern "C" fn Reset() -> ! {
@@ -32,6 +38,9 @@ pub unsafe extern "C" fn Reset() -> ! {
 
     systick::init();
 
+    #[link_section = ".app_stack"]
+    static mut APP_STACK: AlignedStack = AlignedStack(MaybeUninit::uninit());
+
     loop {}
 }
 pub union Vector {
@@ -45,7 +54,6 @@ extern "C" {
     fn MemManage();
     fn BusFault();
     fn UsageFault();
-    fn SVCall();
     fn PendSV();
 }
 
@@ -73,6 +81,31 @@ pub static EXCEPTIONS: [Vector; 14] = [
 #[no_mangle]
 pub extern "C" fn SysTick() {
     hprintln!("Systick").unwrap();
+}
+
+#[no_mangle]
+#[naked]
+pub unsafe extern "C" fn SVCall() {
+    asm!(
+        "cmp lr, #0xfffffff9",
+        "bne 1f",
+
+        "mov r0, #1",
+        "msr CONTROL, r0",
+        "isb",
+        "movw lr, #0xfffd",
+        "movt lr, #0xffff",
+        "bx lr",
+
+        "1:",
+        "mov r0, #0",
+        "msr CONTROL, r0",
+        "isb",
+        "movw lr, #0xfff9",
+        "movt lr, #0xffff",
+        "bx lr",
+        options(noreturn),
+    );
 }
 
 #[no_mangle]
