@@ -8,10 +8,17 @@ use core::ptr;
 use cortex_m_semihosting::hprintln;
 use core::mem::MaybeUninit;
 
+mod process;
 mod systick;
+
+use process::ContextFrame;
 
 #[repr(align(8))]
 struct AlignedStack(MaybeUninit<[u8; 1024]>);
+
+extern "C" {
+    fn asm_execute_process(sp: usize);
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn Reset() -> ! {
@@ -41,8 +48,29 @@ pub unsafe extern "C" fn Reset() -> ! {
     #[link_section = ".app_stack"]
     static mut APP_STACK: AlignedStack = AlignedStack(MaybeUninit::uninit());
 
+    let ptr = (APP_STACK.0.as_ptr() as usize) + 1024 - 0x20;
+    let context_frame: &mut ContextFrame = &mut *(ptr as *mut ContextFrame);
+
+    context_frame.r0 = 0;
+    context_frame.r1 = 0;
+    context_frame.r2 = 0;
+    context_frame.r3 = 0;
+    context_frame.r12 = 0;
+    context_frame.lr = 0;
+    context_frame.return_addr = app_main as u32;
+    context_frame.xpsr = 0x0100_0000;
+
+    asm_execute_process(ptr);
+
     loop {}
 }
+
+extern "C" fn app_main() -> ! {
+    hprintln!("App").unwrap();
+    unsafe { asm!("svc 0"); }
+    loop {}
+}
+
 pub union Vector {
     reserved: u32,
     handler: unsafe extern "C" fn(),
