@@ -14,10 +14,13 @@ mod scheduler;
 mod systick;
 mod mutex;
 mod led;
+mod vcell;
 
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
 use scheduler::Scheduler;
+
+use led::{PortA, LED};
 
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
@@ -65,11 +68,13 @@ pub unsafe extern "C" fn Reset() -> ! {
     sched.push(&mut item2);
     sched.push(&mut item3);
 
-    led::init_led();
+    let porta = PortA::new();
+    let led = LED::new(&porta);
+    led.init();
     hprintln!("Set LED").unwrap();
-    led::set_led();
+    led.set();
     hprintln!("Clear LED").unwrap();
-    led::clear_led();
+    led.clear();
 
     sched.exec();
 }
