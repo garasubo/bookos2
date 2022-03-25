@@ -2,6 +2,10 @@
 #![no_std]
 #![feature(asm)]
 #![feature(naked_functions)]
+#![feature(alloc_error_handler)]
+#![feature(const_mut_refs)]
+
+extern crate alloc;
 
 use core::panic::PanicInfo;
 use core::ptr;
@@ -15,6 +19,7 @@ mod systick;
 mod mutex;
 mod led;
 mod vcell;
+mod allocator;
 
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
@@ -24,6 +29,22 @@ use led::{PortA, LED};
 
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
+
+use alloc::alloc::{GlobalAlloc, Layout};
+struct DummyAllocator;
+
+unsafe impl GlobalAlloc for DummyAllocator {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
+        unimplemented!();
+    }
+    
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        unimplemented!();
+    }
+}
+
+#[global_allocator]
+static GLOBAL_ALLOCATOR: DummyAllocator = DummyAllocator;
 
 #[no_mangle]
 pub unsafe extern "C" fn Reset() -> ! {
@@ -184,4 +205,9 @@ pub static RESET_VECTOR: unsafe extern "C" fn() -> ! = Reset;
 #[panic_handler]
 fn panic(_panic: &PanicInfo<'_>) -> ! {
     loop {}
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(_layout: Layout) -> ! {
+    panic!();
 }
