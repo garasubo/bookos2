@@ -2,10 +2,6 @@
 #![no_std]
 #![feature(asm)]
 #![feature(naked_functions)]
-#![feature(alloc_error_handler)]
-#![feature(const_mut_refs)]
-
-extern crate alloc;
 
 use core::panic::PanicInfo;
 use core::ptr;
@@ -19,7 +15,6 @@ mod systick;
 mod mutex;
 mod led;
 mod vcell;
-mod allocator;
 
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
@@ -30,11 +25,6 @@ use led::{PortA, LED};
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
 
-use alloc::{alloc::Layout, string::String, format};
-
-#[global_allocator]
-static GLOBAL_ALLOCATOR: mutex::Mutex<allocator::SimpleAllocator> = mutex::Mutex::new(allocator::SimpleAllocator::new());
-
 #[no_mangle]
 pub unsafe extern "C" fn Reset() -> ! {
     extern "C" {
@@ -43,7 +33,6 @@ pub unsafe extern "C" fn Reset() -> ! {
         static mut _sidata: u8;
         static mut _sdata: u8;
         static mut _edata: u8;
-        static mut _heap_start: u8;
     }
 
     let count = &_ebss as *const u8 as usize - &_sbss as *const u8 as usize;
@@ -78,14 +67,6 @@ pub unsafe extern "C" fn Reset() -> ! {
     sched.push(&mut item1);
     sched.push(&mut item2);
     sched.push(&mut item3);
-
-    let heap_start_addr = &_heap_start as *const u8 as usize;
-
-    GLOBAL_ALLOCATOR.lock().add_new_node(heap_start_addr, 1024);
-
-    let str: String = format!("heap start is 0x{:x}", heap_start_addr);
-    hprintln!("{}", str).unwrap();
-    drop(str);
 
     let porta = PortA::new();
     let led = LED::new(&porta);
@@ -203,9 +184,4 @@ pub static RESET_VECTOR: unsafe extern "C" fn() -> ! = Reset;
 #[panic_handler]
 fn panic(_panic: &PanicInfo<'_>) -> ! {
     loop {}
-}
-
-#[alloc_error_handler]
-fn alloc_error_handler(_layout: Layout) -> ! {
-    panic!();
 }
