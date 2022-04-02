@@ -12,10 +12,14 @@ mod process;
 mod linked_list;
 mod scheduler;
 mod systick;
+mod mutex;
 
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
 use scheduler::Scheduler;
+
+
+static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
 
 #[no_mangle]
 pub unsafe extern "C" fn Reset() -> ! {
@@ -65,6 +69,10 @@ pub unsafe extern "C" fn Reset() -> ! {
 
 extern "C" fn app_main() -> ! {
     let mut i = 0;
+    let mut guard = GLOBAL_COUNT.lock();
+    *guard += 1;
+    drop(guard);
+
     loop {
         hprintln!("App: {}", i).unwrap();
         unsafe { asm!("svc 0"); }
