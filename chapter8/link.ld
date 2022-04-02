@@ -53,6 +53,8 @@ SECTIONS
     *(.app_stack .app_stack.*);
   } > RAM
 
+  _heap_start = ADDR(.app_stack) + SIZEOF(.app_stack);
+
   /DISCARD/ :
   {
     *(.ARM.exidx .ARM.exidx.*);

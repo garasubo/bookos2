@@ -30,21 +30,10 @@ use led::{PortA, LED};
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
 
-use alloc::alloc::{GlobalAlloc, Layout};
-struct DummyAllocator;
-
-unsafe impl GlobalAlloc for DummyAllocator {
-    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
-        unimplemented!();
-    }
-    
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        unimplemented!();
-    }
-}
+use alloc::{alloc::Layout, string::String, format};
 
 #[global_allocator]
-static GLOBAL_ALLOCATOR: DummyAllocator = DummyAllocator;
+static GLOBAL_ALLOCATOR: mutex::Mutex<allocator::SimpleAllocator> = mutex::Mutex::new(allocator::SimpleAllocator::new());
 
 #[no_mangle]
 pub unsafe extern "C" fn Reset() -> ! {
@@ -54,6 +43,7 @@ pub unsafe extern "C" fn Reset() -> ! {
         static mut _sidata: u8;
         static mut _sdata: u8;
         static mut _edata: u8;
+        static mut _heap_start: u8;
     }
 
     let count = &_ebss as *const u8 as usize - &_sbss as *const u8 as usize;
@@ -88,6 +78,14 @@ pub unsafe extern "C" fn Reset() -> ! {
     sched.push(&mut item1);
     sched.push(&mut item2);
     sched.push(&mut item3);
+
+    let heap_start_addr = &_heap_start as *const u8 as usize;
+
+    GLOBAL_ALLOCATOR.lock().add_new_node(heap_start_addr, 1024);
+
+    let str: String = format!("heap start is 0x{:x}", heap_start_addr);
+    hprintln!("{}", str).unwrap();
+    drop(str);
 
     let porta = PortA::new();
     let led = LED::new(&porta);
