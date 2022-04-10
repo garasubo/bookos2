@@ -15,12 +15,14 @@ mod systick;
 mod mutex;
 mod led;
 mod vcell;
+mod port;
 
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
 use scheduler::Scheduler;
 
-use led::{PortA, LED};
+use port::{Port, PortA};
+use led::LED;
 
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
@@ -68,8 +70,8 @@ pub unsafe extern "C" fn Reset() -> ! {
     sched.push(&mut item2);
     sched.push(&mut item3);
 
-    let porta = PortA::new();
-    let led = LED::new(&porta);
+    let porta = Port::<PortA>::new();
+    let led = LED::new(&porta.pin15);
     led.init();
     hprintln!("Set LED").unwrap();
     led.set();
