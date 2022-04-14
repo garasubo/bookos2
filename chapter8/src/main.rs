@@ -19,14 +19,17 @@ mod systick;
 mod mutex;
 mod led;
 mod vcell;
+mod port;
+mod button;
 mod allocator;
 
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
 use scheduler::Scheduler;
 
-use led::{PortA, LED};
-
+use port::{Port, PortA, PortC};
+use led::LED;
+use button::{Button1, Button2, Button3};
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
 
@@ -87,13 +90,25 @@ pub unsafe extern "C" fn Reset() -> ! {
     hprintln!("{}", str).unwrap();
     drop(str);
 
-    let porta = PortA::new();
-    let led = LED::new(&porta);
+    let porta = Port::<PortA>::new();
+    let led = LED::new(&porta.pin15);
+    let portc = Port::<PortC>::new();
+    let button1 = Button1::new(&portc.pin26);
+    let button2 = Button2::new(&portc.pin27);
+    let button3 = Button3::new(&portc.pin28);
     led.init();
+    button1.init();
+    button2.init();
+    button3.init();
+    while !button1.is_pushed() {}
     hprintln!("Set LED").unwrap();
     led.set();
+    while !button2.is_pushed() {}
     hprintln!("Clear LED").unwrap();
     led.clear();
+    while !button3.is_pushed() {}
+    hprintln!("Set LED").unwrap();
+    led.set();
 
     sched.exec();
 }
