@@ -13,16 +13,16 @@ impl PortId for PortA {
 }
 
 impl PortId for PortC {
-    const ADDR: usize = 0x4100_8080;
+    const ADDR: usize = 0x4100_8100;
 }
 
 pub struct Pin<P: PortId, const N: usize> {
-    _portId: PhantomData<P>,
+    _port_id: PhantomData<P>,
 }
 
 impl<P: PortId, const N: usize> Pin<P, N> {
     fn new() -> Self {
-        Self { _portId: PhantomData }
+        Self { _port_id: PhantomData }
     }
 
     fn registers<'a>(&'a self) -> &'a PortRegisters {
@@ -44,6 +44,14 @@ impl<P: PortId, const N: usize> Pin<P, N> {
     
     pub fn clear_out(&self) {
         self.registers().outclr.write(1 << N);
+    }
+    
+    pub fn enable_floating_input(&self) {
+        self.registers().pincfg[N].write(1 << 1);
+    }
+
+    pub fn get_in(&self) -> bool {
+        self.registers().in_.read() & (1 << N) > 0
     }
 }  
 
