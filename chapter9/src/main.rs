@@ -27,10 +27,7 @@ mod syscall;
 use process::{AlignedStack, Process};
 use linked_list::ListItem;
 use scheduler::Scheduler;
-
-use port::{Port, PortA, PortC};
-use led::LED;
-use button::{Button1, Button2, Button3};
+use syscall::{syscall_get_switch, syscall_set_led, syscall_yield};
 
 static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
 
@@ -91,53 +88,31 @@ pub unsafe extern "C" fn Reset() -> ! {
     hprintln!("{}", str).unwrap();
     drop(str);
 
-    let porta = Port::<PortA>::new();
-    let led = LED::new(&porta.pin15);
-    let portc = Port::<PortC>::new();
-    let button1 = Button1::new(&portc.pin26);
-    let button2 = Button2::new(&portc.pin27);
-    let button3 = Button3::new(&portc.pin28);
-    led.init();
-    button1.init();
-    button2.init();
-    button3.init();
-    while !button1.is_pushed() {}
-    hprintln!("Set LED").unwrap();
-    led.set();
-    while !button2.is_pushed() {}
-    hprintln!("Clear LED").unwrap();
-    led.clear();
-    while !button3.is_pushed() {}
-    hprintln!("Set LED").unwrap();
-    led.set();
-
     sched.exec();
 }
 
 extern "C" fn app_main() -> ! {
-    let mut i = 0;
-    let mut guard = GLOBAL_COUNT.lock();
-    *guard += 1;
-    drop(guard);
-
     loop {
-        hprintln!("App: {}", i).unwrap();
-        unsafe { asm!("svc 0"); }
-        i += 1;
+        hprintln!("App1").unwrap();
+        while !syscall_get_switch() {}
+        syscall_yield();
     }
 }
 
 extern "C" fn app_main2() -> ! {
     loop {
         hprintln!("App2").unwrap();
-        unsafe { asm!("svc 0"); }
+        syscall_set_led(true);
+        while !syscall_get_switch() {}
+        syscall_yield();
     }
 }
 
 extern "C" fn app_main3() -> ! {
     loop {
         hprintln!("App3").unwrap();
-        unsafe { asm!("svc 0"); }
+        syscall_set_led(false);
+        syscall_yield();
     }
 }
 

@@ -52,5 +52,9 @@ impl<'a> Process<'a> {
     pub fn exec(&mut self) {
         self.sp = unsafe { asm_execute_process(self.sp, &mut self.regs) }
     }
+
+    pub fn get_context_frame(&mut self) -> &'a mut ContextFrame {
+        unsafe { &mut *(self.sp as *mut ContextFrame) }
+    }
 }
 
