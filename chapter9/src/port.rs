@@ -51,7 +51,7 @@ impl<P: PortId, const N: usize> Pin<P, N> {
     }
 
     pub fn get_in(&self) -> bool {
-        self.registers().in_.read() & (1 << N) > 0
+        self.registers().r#in.read() & (1 << N) > 0
     }
 }  
 
@@ -141,7 +141,7 @@ pub struct PortRegisters {
     pub outset: VolatileCell<u32>,
     pub outtgl: VolatileCell<u32>,
 
-    pub in_: VolatileCell<u32>,
+    pub r#in: VolatileCell<u32>,
     pub ctrl: VolatileCell<u32>,
     pub wrconfigf: VolatileCell<u32>,
     pub evctrl: VolatileCell<u32>,

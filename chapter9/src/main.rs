@@ -29,8 +29,6 @@ use linked_list::ListItem;
 use scheduler::Scheduler;
 use syscall::{syscall_get_switch, syscall_set_led, syscall_yield};
 
-static GLOBAL_COUNT: mutex::Mutex<usize> = mutex::Mutex::new(0);
-
 use alloc::{alloc::Layout, string::String, format};
 
 #[global_allocator]
