@@ -43,8 +43,6 @@ pub unsafe extern "C" fn Reset() -> ! {
 
     hprintln!("Hello World").unwrap();
 
-    systick::init();
-
     #[link_section = ".app_stack"]
     static mut APP_STACK: AlignedStack = AlignedStack(MaybeUninit::uninit());
 
@@ -61,6 +59,8 @@ pub unsafe extern "C" fn Reset() -> ! {
     context_frame.xpsr = 0x0100_0000;
 
     asm_execute_process(ptr);
+
+    systick::init();
 
     loop {}
 }
